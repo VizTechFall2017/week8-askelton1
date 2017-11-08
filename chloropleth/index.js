@@ -17,22 +17,39 @@ var albersProjection = d3.geoAlbersUsa()  //tell it which projection to use
 path = d3.geoPath()
     .projection(albersProjection);        //tell it to use the projection that we just made to convert lat/long to pixels
 
+var stateLookup = d3.map();
+
+var colorScale = d3.scaleLinear().range(['white','blue']);
 
 //import the data from the .csv file
-d3.json('./cb_2016_us_state_20m.json', function(dataIn){
+queue()
+    .defer(d3.json,'./cb_2016_us_state_20m.json')
+        .defer(d3.csv,'./statePop.csv')
+            .await(function(err, stateData, popData){
+                popData.forEach(function(d){
+                    stateLookup.set(d.name, d.population);
+                });
 
-    svg.selectAll("path")               //make empty selection
-        .data(dataIn.features)          //bind to the features array in the map data
-        .enter()
-        .append("path")                 //add the paths to the DOM
-        .attr("d", path)                //actually draw them
-        .attr("class", "feature")
-        .attr('fill','gainsboro')
-        .attr('stroke','white')
-        .attr('stroke-width',.2);
+                console.log(stateLookup.get('Maine'));
 
+                colorScale.domain([0,d3.max(popData.map(function(d){
+                    return d.population;
+                }))]);
 
-  });
+                svg.selectAll("path")               //make empty selection
+                    .data(stateData.features)          //bind to the features array in the map data
+                    .enter()
+                    .append("path")                 //add the paths to the DOM
+                    .attr("d", path)                //actually draw them
+                    .attr("class", "feature")
+                    .attr('fill', function(d){
+                        console.log(d.properties.NAME);
+                        return colorScale(stateLookup.get(d.properties.NAME));
+                    })
+                    .attr('stroke','white')
+                    .attr('stroke-width',.2)
+            });
+
 
 
 
